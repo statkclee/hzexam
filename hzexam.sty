@@ -1,0 +1,326 @@
+\ProvidesPackage{hzexam}[2021/04/20] %2021/04/12
+
+\RequirePackage{kotex}
+\RequirePackage{stackengine}
+\RequirePackage{ulem}
+\RequirePackage{xspace}
+\RequirePackage{xcolor}
+\RequirePackage{enumitem}
+\RequirePackage{amsmath,amssymb,amsthm,mathtools}
+\RequirePackage{shellesc}
+
+\ExplSyntaxOn
+
+\@ifclassloaded{memoir}{}
+{
+    \RequirePackage{moreverb}
+    \cs_set_eq:NN \verbatimoutput \verbatimwrite
+    \cs_set_eq:NN \endverbatimoutput \endverbatimwrite
+}
+
+\newlist{Question}{enumerate}{1}
+\setlist[Question, 1]{label=\arabic*., labelwidth=1em, leftmargin=!}
+\newlist{Answers}{enumerate}{1}
+\setlist[Answers]{label=\protect\@onum{\value*}, labelwidth=1em, leftmargin=!, itemsep=0pt}
+
+\int_new:N \l_QA_question_int
+\int_new:N \l_QA_subquestion_int
+\int_new:N \l_QA_answer_int
+
+\keys_define:nn { QA }
+{
+    file                .tl_set:N = \l_QA_file_tl,
+    counter             .int_set:N = \l_QA_counter_int,
+    zeros               .int_set:N = \l_QA_zeros_int,
+    overwrite           .bool_set:N = \l_QA_overwrite_bool,
+    teacher             .bool_set:N = \l_QA_teacher_bool,
+    answer-sheet        .bool_set:N = \l_QA_answer_sheet_bool,
+    question-no         .code:n = { \int_set:Nn \l_QA_question_int {#1-1} },
+    question-after-skip .skip_set:N = \l_QA_question_after_skip,
+    answer-before-skip   .skip_set:N = \l_QA_answer_before_skip,
+    answer-color        .tl_set:N = \l_QA_answer_color_tl,
+    answer-hook         .tl_set:N = \l_QA_answer_hook_tl,
+}
+
+\NewDocumentCommand \ResetQuestionNo {}
+{
+    \int_zero:N \l_QA_question_int
+}
+
+\NewDocumentCommand \QAsetup { m }
+{
+    \keys_set:nn { QA }{ #1 }
+}
+
+\QAsetup{
+    file=undefined,
+    counter=1,
+    overwrite=true,
+    zeros=3,
+    teacher=true,
+    answer-sheet=true,
+    question-no=1,
+    question-after-skip=\baselineskip,
+    answer-before-skip=.75\baselineskip,
+    answer-color=blue,
+    answer-hook=\hfill
+}
+
+% 독자가 선생이면 정답 보여주기
+\NewDocumentCommand \teacher {}
+{
+    \bool_gset_true:N \l_QA_teacher_bool
+}
+\NewDocumentCommand \student {}
+{
+    \bool_gset_false:N \l_QA_teacher_bool
+}
+
+% 지문에 포함된 보기 (underlined answers)
+
+\NewDocumentCommand \ulans { s m }
+{
+    \int_incr:N \l_QA_answer_int
+    \IfBooleanTF{ #1 }
+    {
+        \@onum{\l_QA_answer_int}\,\uline{#2}
+    }{
+        \stackunder{ \uline{#2} }{ \footnotesize \@onum{\l_QA_answer_int} }
+    }
+}
+
+% 보기: 구분자는 | 또는 ;
+\NewDocumentCommand \answers { +m }
+{
+    \regex_split:nnN {[\|\;]}{#1} \l_tmpa_seq
+    \begin{Answers}
+    \seq_map_inline:Nn \l_tmpa_seq
+    {
+        \item ##1
+    }
+    \end{Answers}
+}
+
+% 지문
+\NewDocumentEnvironment {premise} { s o +b }
+{
+    \IfBooleanTF { #1 }
+    {
+        \int_gincr:N \l_QA_question_int
+        \int_zero:N \l_QA_subquestion_int
+
+        \begin{Question}[start=\int_use:N \l_QA_question_int]
+        \item #3
+        \end{Question}
+    }{
+        \noindent
+        \IfValueT{ #2 }
+        {
+            \int_set:Nn \l_tmpa_int { \l_QA_question_int + 1 }
+            \int_set:Nn \l_tmpb_int { \l_tmpa_int + #2 -1 }
+            [\int_use:N \l_tmpa_int 〜 \int_use:N \l_tmpb_int]\space
+        }
+        \ignorespaces
+        #3
+        \vspace{\l_QA_question_after_skip}
+    }
+}{}
+
+\cs_new:Npn \QA_filename:NNN #1 #2 #3
+{
+    \tl_set:No #1 { \int_use:N #3 }
+    \int_step_inline:nn { \l_QA_zeros_int - 1 }
+    {
+        \int_set:Nn \l_tmpb_int { \fp_eval:n { 10 ** ##1 } }
+        \int_compare:nT { #3 < \l_tmpb_int }
+        {
+            \tl_put_left:Nn #1 { 0 }
+        }
+    }
+    \tl_put_left:No #1 { #2- }
+    \tl_put_right:Nn #1 { .tex }
+}
+
+\NewDocumentEnvironment{QAwrite}{}
+{
+    \QA_filename:NNN \l_tmpa_tl \l_QA_file_tl \l_QA_counter_int
+    \bool_if:NF \l_QA_overwrite_bool
+    {
+        \IfFileExists{\l_tmpa_tl}
+        {
+            \errmessage{\l_tmpa_tl~already~exists.}
+        }{}
+    }
+    \group_begin:
+    \exp_args:Nx \verbatimoutput{ \l_tmpa_tl }
+}{
+    \endverbatimoutput
+    \group_end:
+
+    \input{\l_tmpa_tl}
+    \int_gincr:N \l_QA_counter_int
+}
+
+% {문제}[보기]{정답}
+\NewDocumentCommand \qa { s t| +m +o +m }
+{
+    \int_zero:N \l_QA_answer_int
+
+    \IfBooleanTF { #1 }
+    {
+        \int_gincr:N \l_QA_subquestion_int
+        \begin{Question}[label=(\arabic*), labelwidth=1.5em, start=\int_use:N \l_QA_subquestion_int]
+    }{
+        \int_gincr:N \l_QA_question_int
+        \begin{Question}[start=\int_use:N \l_QA_question_int]
+    }
+        \item
+            \ignorespaces #3
+            \IfBooleanF{ #2 }
+            {
+                \bool_if:NT \l_QA_teacher_bool
+                {
+                    #5
+                }
+            }
+            \IfValueT{ #4 }
+            {
+                \answers{ #4 }
+            }
+            \IfBooleanT{ #2 }
+            {
+                \bool_if:NTF \l_QA_teacher_bool
+                {
+                    \vspace{\l_QA_answer_before_skip}
+                    \par
+                    \group_begin:
+                        \color{\l_QA_answer_color_tl}
+                        #5
+                    \group_end:
+                }{
+                    \par
+                    \phantom{#5}
+                }
+            }
+        \end{Question}
+
+        \bool_if:NT \l_QA_answer_sheet_bool
+        {
+            \exp_args:Nooo \QA_write_answers:nnn
+            { \int_use:N \l_QA_question_int }{ \int_use:N \l_QA_subquestion_int }{ #5 }
+        }
+    \vspace{\l_QA_question_after_skip}
+}
+
+\cs_new:Npn \QA_write_answers:nnn #1 #2 #3
+{
+    \iow_now:Nn \g_tmpa_iow
+    {
+        \CorrectAnswer{ #1 }{ #2 }{ #3 }
+    }
+}
+
+\NewDocumentCommand \CorrectAnswer { mmm }
+{
+    \int_compare:nTF { #2 > 0 }
+    {
+        \tl_set:Nn \l_tmpa_tl { #1-#2. }
+    }{
+        \tl_set:Nn \l_tmpa_tl { #1. }
+    }
+    \begin{itemize}
+    \item[\l_tmpa_tl] #3
+    \end{itemize}
+}
+
+\NewDocumentCommand \InputAnswersSheet {}
+{
+    \bool_if:NT \l_QA_answer_sheet_bool
+    {
+        \iow_close:N \g_tmpa_iow
+    }
+    \IfFileExists{ \jobname _answers_sheet.tex }
+    {
+        \QAsetup{answer-color=black, answer-hook={}}
+        \input{\jobname _answers_sheet.tex}
+    }{}
+}
+
+\AtBeginDocument{
+    \bool_if:NT \l_QA_answer_sheet_bool
+    {
+        \iow_open:Nn \g_tmpa_iow { \jobname _answers_sheet.tex }
+    }
+}
+
+% correct answer
+\NewDocumentCommand \ca { s m }
+{
+    \l_QA_answer_hook_tl
+    \group_begin:
+    \color{\l_QA_answer_color_tl}
+    \IfBooleanTF{ #1 }
+    {
+        #2
+    }{
+        \@onum{#2}
+    }
+    \group_end:
+}
+
+% 문제 불러오기
+\tl_new:N \l_file_fullpath_tl
+\tl_new:N \l_file_prefix_tl
+\int_new:N \l_file_suffix_int
+
+\NewDocumentCommand\QAinput{ m m }
+{
+    \tl_if_in:nnTF { #2 }{ * }
+    {
+        \QAinput_everyone:nn { #1 }{ #2 }
+    }{
+        \tl_set:Nn \l_file_prefix_tl { #1 }
+        \QAinput_range:n { #2 }
+    }
+}
+
+\cs_new:Npn \QAinput_everyone:nn #1 #2
+{
+    \exp_args:No \ShellEscape{ powershell~get-childitem~-name~#1#2.tex~>~qatexlst.txt }
+
+    \ior_open:Nn \g_tmpa_ior { qatexlst.txt }
+    \ior_map_inline:Nn \g_tmpa_ior
+    {
+        \input{#1##1}
+    }
+    \ior_close:N \g_tmpa_ior
+}
+
+\cs_new:Npn \QAinput_range:n #1
+{
+    \clist_set:Nn \l_tmpa_clist { #1 }
+    \clist_map_inline:Nn \l_tmpa_clist
+    {
+        \tl_if_in:nnTF { ##1 }{ - }
+        {
+            \seq_set_split:Nnn \l_tmpa_seq { - }{ ##1 }
+            \int_step_inline:nnn
+            { \seq_item:Nn \l_tmpa_seq { 1 } }
+            { \seq_item:Nn \l_tmpa_seq { 2 } }
+            {
+                \QAinput_range:NNn \l_file_fullpath_tl \l_file_prefix_tl  { ####1 }
+            }
+        }{
+            \QAinput_range:NNn \l_file_fullpath_tl \l_file_prefix_tl  { ##1 }
+        }
+    }
+}
+
+\cs_new:Npn \QAinput_range:NNn #1 #2 #3
+{
+    \int_set:Nn \l_file_suffix_int { #3 }
+    \QA_filename:NNN #1 #2 \l_file_suffix_int
+    \input{#1}
+}
+
+\ExplSyntaxOff

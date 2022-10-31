@@ -1,0 +1,100 @@
+[head-article]
+tex = 
+	```\documentclass[a4paper]{article}
+	```\usepackage{hzexam}
+	```\QAsetup{question-no=1, teacher=true, answer-sheet=false}
+	```\setmainhangulfont{Noto Serif CJK KR}[BoldFont={* Bold}]
+	```\begin{document}
+	```
+
+[head-oblivoir]
+tex = 
+	```\documentclass{oblivoir}
+	```\usepackage{fapapersize}
+	```\usefapapersize{210mm,297mm,30mm,*,30mm,*}
+	```\usepackage{hzexam}
+	```\QAsetup{question-no=1, teacher=true, answer-sheet=false}
+	```\setmainhangulfont{Noto Serif CJK KR}[BoldFont={* Bold}]
+	```\begin{document}
+	```
+
+[tail-common]
+tex = 
+	```\end{document}
+	```
+
+[basic-001]
+tex = ```\begin{premise}[3]
+	```If there is an error, select the one underlined. Some sentences are correct and no sentence contains more than one error.
+	```\end{premise}
+	```
+	```\qa{
+	```Allan \ulans{is} afraid \ulans{of} the rain\ulans{, he} \ulans{likes} the thunder.
+	```}{
+	```\ca{3}
+	```}
+	```
+	```\qa{
+	```Maria, who had \ulans{just} eaten, thought \ulans{concerning} \ulans{having} a candy bar \ulans{or} ice cream. \ulans{No error}
+	```}{
+	```\ca{2}
+	```}
+	```
+	```\qa{
+	```Last \ulans*{spring} the roofers replaced the asphalt shingles \ulans*{that} a heavy snowstorm \ulans*{damages} during the \ulans*{preceding} winter.
+	```}{
+	```\ca{3}
+	```}
+
+[basic-002]
+tex = ```\begin{premise}
+	```빈 칸을 알맞은 말로 채우시오.
+	```\end{premise}
+	```
+	```\qa{
+	```I used the \ulans{\phantom{pencil}} to draw a \ulans{\phantom{picture}} for my mom.
+	```}{
+	```\ca*{pencil, picture}
+	```}
+	```
+	```\qa{
+	```Every night, we read a \uline{\phantom{book}} together in bed.
+	```}{
+	```\ca*{book}
+	```}
+
+[diff-equation-001]
+tex = ```\begin{premise}*
+	```다음의 1계 미분방정식을 푸시오. [각 5점]
+	```\end{premise}
+	```
+	```\qa*|{
+	```$y' = (y + 4x)^2$
+	```}{
+	```너무 어려워요.
+	```선생님이 풀어 주세요.
+	```}
+	```
+	```\qa*|{
+	```$3x^2y^2y' + x(x - 1)y^3 = x^3e^x$
+	```}{
+	```이것도 어려워요.
+	```집에 가서 엄마한테 물어볼게요.
+	```}
+	```
+
+[korea-001]
+tex = ```
+	```\qa{
+	```위대한 신 도깨비의 이름은 무엇인가요?
+	```}[
+	```김선 |
+	```지은탁 ;
+	```왕여 |
+	```김신
+	```]{
+	```\ca{4}
+	```}
+	```
+	```
+
